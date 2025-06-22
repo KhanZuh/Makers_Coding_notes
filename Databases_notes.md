@@ -15,7 +15,7 @@
 = Start Simple (get CRUD working, then add features)
 
 
-## SQL commands
+## PostgreSQL Command Cheat Sheet
 
 ```bash
 -- Connect to PostgreSQL
@@ -46,6 +46,8 @@ This is a PostgreSQL meta-command (notice the backslash) that connects to the "b
 Another meta-command that lists all tables in the current database. When you first create a database, this will show an empty result since no tables exist yet. As you create tables, they'll appear in this list.
 
 The postgreSQL meta-commands only work inside the psql CLI tool 
+
+The workflow here is typical for setting up a new PostgreSQL database: connect to the server, create your database, switch to using it, then check what tables exist (which would be none initially). From here, you'd typically start creating tables with CREATE TABLE statements to build your database structure.
 
 ## Creating tables 
 
