@@ -1,16 +1,14 @@
 # 📡 Database Concepts & SQL Foundations
 
-### TLdr: Give me the 80/20
-**Your Success Formula:**
+## TLdr: Give me the 80/20
 
+### Your success formula
 - Write the test first (what should happen?)
 - Create the repository method (how to talk to database?)
 - Write the SQL (what data operation?)
 - Make it pass (does it work?)
 
-
-**Key Mindset:**
-
+### Key mindsets
 - Repository = Database Interface (hides SQL complexity)
 - Test Everything (databases are stateful, tests catch issues)
 - Foreign Keys = Relationships (connect your tables)
