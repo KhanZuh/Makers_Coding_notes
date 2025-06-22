@@ -7,7 +7,8 @@
 - Create the repository method (how to talk to database?)
 - Write the SQL (what data operation?)
 - Make it pass (does it work?)
-§
+
+
 **Key Mindset:**
 
 - Repository = Database Interface (hides SQL complexity)
