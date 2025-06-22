@@ -17,19 +17,35 @@
 
 ## SQL commands
 
-```sql
+```bash
 -- Connect to PostgreSQL
 psql -U username -d database_name
+```
+This is a terminal/command line command to connect to a PostgreSQL server. The -U flag specifies the username, and -d specifies which database to connect to. You'd replace "username" and "database_name" with actual values.
+These are shell commands that invoke PostgreSQL utilities like psql, pg_dump, and pg_restore.
 
+
+
+```sql
 -- Create a database
 CREATE DATABASE bookstore;
+```
+This SQL command creates a new database called "bookstore". Once connected to PostgreSQL, you can run this to create your database.
+These are executed inside the PostgreSQL environment, via the psql command-line tool.
 
+```bash
 -- Use the database
 \c bookstore
+```
+This is a PostgreSQL meta-command (notice the backslash) that connects to the "bookstore" database you just created. It's equivalent to "use this database" - switching your current session to work within that specific database.
 
+```bash
 -- List all tables
 \dt
 ```
+Another meta-command that lists all tables in the current database. When you first create a database, this will show an empty result since no tables exist yet. As you create tables, they'll appear in this list.
+
+The postgreSQL meta-commands only work inside the psql CLI tool 
 
 ## Creating tables 
 
