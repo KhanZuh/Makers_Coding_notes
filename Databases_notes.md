@@ -194,70 +194,98 @@ The use of context managers (`with` statements) ensures proper resource manageme
 
 ## Setting Up Database Connection (Example)
 ```python
-# database_connection.py
-import psycopg2
+import psycopg
+from psycopg.rows import dict_row
+import os
 
 class DatabaseConnection:
+    DATABASE_NAME = "student_database"  # Change this to your database name
+
     def __init__(self):
         self.connection = None
-    
-    def connect(self, database_name="your_database"):
-        self.connection = psycopg2.connect(
-            host="localhost",
-            database=database_name,
-            user="your_username",
-            password="your_password"
-        )
-        return self.connection
-    
+
+    # Connect to PostgreSQL using psycopg3 with dict_row for dictionary results
+    def connect(self):
+        try:
+            self.connection = psycopg.connect(
+                f"postgresql://localhost/{self.DATABASE_NAME}",
+                row_factory=dict_row)
+        except psycopg.OperationalError:
+            raise Exception(f"Couldn't connect to the database {self.DATABASE_NAME}! " \
+                    f"Did you create it using `createdb {self.DATABASE_NAME}`?")
+
+    # Seed the database with SQL file
     def seed(self, sql_filename):
-        """Load SQL file to set up database"""
-        with open(sql_filename, 'r') as file:
-            sql_script = file.read()
-        
+        self._check_connection()
+        if not os.path.exists(sql_filename):
+            raise Exception(f"File {sql_filename} does not exist")
         with self.connection.cursor() as cursor:
-            cursor.execute(sql_script)
+            cursor.execute(open(sql_filename, "r").read())
             self.connection.commit()
+
+    # Execute SQL queries with automatic cursor management
+    def execute(self, query, params=[]):
+        self._check_connection()
+        with self.connection.cursor() as cursor:
+            cursor.execute(query, params)
+            if cursor.description is not None:
+                result = cursor.fetchall()
+            else:
+                result = None
+            self.connection.commit()
+            return result
+
+    CONNECTION_MESSAGE = '' \
+        'DatabaseConnection.execute: Cannot run a SQL query as ' \
+        'the connection to the database was never opened. Did you ' \
+        'make sure to call first the method DatabaseConnection.connect() ' \
+        'in your app.py file (or in your tests)?'
+
+    # Private method to check connection exists
+    def _check_connection(self):
+        if self.connection is None:
+            raise Exception(self.CONNECTION_MESSAGE)
 ```
 
 ## Repository Pattern Implementation
 ```python
-# student_repository.py
+from lib.student import Student
+
 class StudentRepository:
+    
+    # Initialize with a database connection
     def __init__(self, connection):
         self._connection = connection
-    
+
+    # Retrieve all students
     def all(self):
-        """Return all students"""
-        with self._connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM students")
-            rows = cursor.fetchall()
-            return [self._row_to_student(row) for row in rows]
-    
+        rows = self._connection.execute('SELECT * FROM students')
+        students = []
+        for row in rows:
+            item = Student(row["id"], row["name"], row["email"], row["cohort_id"])
+            students.append(item)
+        return students
+
+    # Find a single student by their id
     def find(self, student_id):
-        """Find student by ID"""
-        with self._connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM students WHERE id = %s", [student_id])
-            row = cursor.fetchone()
-            return self._row_to_student(row) if row else None
-    
+        rows = self._connection.execute(
+            'SELECT * FROM students WHERE id = %s', [student_id])
+        if not rows:
+            return None
+        row = rows[0]
+        return Student(row["id"], row["name"], row["email"], row["cohort_id"])
+
+    # Create a new student
     def create(self, student):
-        """Create new student"""
-        with self._connection.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO students (name, email, cohort_id) VALUES (%s, %s, %s)",
-                [student.name, student.email, student.cohort_id]
-            )
-            self._connection.commit()
-    
+        self._connection.execute('INSERT INTO students (name, email, cohort_id) VALUES (%s, %s, %s)', [
+                                 student.name, student.email, student.cohort_id])
+        return None
+
+    # Delete a student by their id
     def delete(self, student_id):
-        """Delete student by ID"""
-        with self._connection.cursor() as cursor:
-            cursor.execute("DELETE FROM students WHERE id = %s", [student_id])
-            self._connection.commit()
-    
-    def _row_to_student(self, row):
-        return Student(row[0], row[1], row[2], row[3])  # id, name, email, cohort_id
+        self._connection.execute(
+            'DELETE FROM students WHERE id = %s', [student_id])
+        return None
 ```
 
 ## Model Classes
@@ -276,6 +304,16 @@ class Student:
     def __repr__(self):
         return f"Student({self.id}, {self.name}, {self.email}, {self.cohort_id})"
 ```
+The DatabaseConnection class is designed as a wrapper around the psycopg library to provide a simplified, consistent interface for database operations. 
+
+It uses psycopg3 with `dict_row` factory so that query results are returned as dictionaries rather than tuples, making data access more intuitive and maintainable through column names like `row["name"]` instead of positional indexing. 
+
+The central `execute()` method handles all cursor management automatically, ensuring proper resource cleanup and connection management while abstracting away the complexity of manual cursor creation and cleanup. 
+
+This design provides built-in error handling with meaningful messages, automatic transaction management through commits, and connection validation to prevent runtime errors. The repository classes leverage this abstraction by simply calling `execute()` with SQL queries and parameters, allowing them to focus on business logic rather than database plumbing. 
+
+This pattern promotes code reusability, reduces boilerplate, and minimizes the risk of resource leaks or connection issues that can occur with manual cursor management, while maintaining clean separation between data access logic and database connection concerns.
+
 
 # 📡 TDD for databases 
 
@@ -299,35 +337,89 @@ What's Being Tested: The `StudentRepository` class that handles database operati
 
 ## Test Setup and Database Management Example
 
+### Database connection class
+```python
+# lib/database_connection.py
+import psycopg
+from psycopg.rows import dict_row
+import os
+
+class DatabaseConnection:
+    DATABASE_NAME = "student_database"  # Default database name
+
+    def __init__(self):
+        self.connection = None
+
+    # Connect to PostgreSQL using psycopg3 with dict_row for dictionary results
+    def connect(self):
+        try:
+            self.connection = psycopg.connect(
+                f"postgresql://localhost/{self.DATABASE_NAME}",
+                row_factory=dict_row)
+        except psycopg.OperationalError:
+            raise Exception(f"Couldn't connect to the database {self.DATABASE_NAME}! " \
+                    f"Did you create it using `createdb {self.DATABASE_NAME}`?")
+
+    # Seed the database with SQL file
+    def seed(self, sql_filename):
+        self._check_connection()
+        if not os.path.exists(sql_filename):
+            raise Exception(f"File {sql_filename} does not exist")
+        with self.connection.cursor() as cursor:
+            cursor.execute(open(sql_filename, "r").read())
+            self.connection.commit()
+
+    # Execute SQL queries with automatic cursor management
+    def execute(self, query, params=[]):
+        self._check_connection()
+        with self.connection.cursor() as cursor:
+            cursor.execute(query, params)
+            if cursor.description is not None:
+                result = cursor.fetchall()
+            else:
+                result = None
+            self.connection.commit()
+            return result
+
+    CONNECTION_MESSAGE = '' \
+        'DatabaseConnection.execute: Cannot run a SQL query as ' \
+        'the connection to the database was never opened. Did you ' \
+        'make sure to call first the method DatabaseConnection.connect() ' \
+        'in your app.py file (or in your tests)?'
+
+    # Private method to check connection exists
+    def _check_connection(self):
+        if self.connection is None:
+            raise Exception(self.CONNECTION_MESSAGE)
+
+```
+### conftest.py (define shared test configuration, fixtures, and setup)
 ```python
 # conftest.py (pytest configuration)
 import pytest
-import psycopg2
-from database_connection import DatabaseConnection
+from lib.database_connection import DatabaseConnection
 
 @pytest.fixture
 def db_connection():
     """Create test database connection"""
     connection = DatabaseConnection()
-    conn = connection.connect("test_database")
+    connection.DATABASE_NAME = "test_database"  # Override for testing
+    connection.connect()
     
     # Clean up before each test
-    with conn.cursor() as cursor:
-        cursor.execute("TRUNCATE students, cohorts RESTART IDENTITY CASCADE")
-        conn.commit()
+    connection.execute("TRUNCATE students, cohorts RESTART IDENTITY CASCADE")
     
-    yield conn
+    yield connection
     
-    # Cleanup after test
-    conn.close()
+    # Connection cleanup is handled by the wrapper class
 ```
 
-## Repository Tests
+### Repository Tests
 ```python
 # test_student_repository.py
 import pytest
-from student_repository import StudentRepository
-from student import Student
+from lib.student_repository import StudentRepository
+from lib.student import Student
 
 def test_all_returns_empty_list_when_no_students(db_connection):
     repository = StudentRepository(db_connection)
@@ -336,11 +428,9 @@ def test_all_returns_empty_list_when_no_students(db_connection):
 def test_create_and_find_student(db_connection):
     repository = StudentRepository(db_connection)
     
-    # First create a cohort
-    with db_connection.cursor() as cursor:
-        cursor.execute("INSERT INTO cohorts (name, start_date) VALUES (%s, %s)", 
-                      ["April 2024", "2024-04-01"])
-        db_connection.commit()
+    # First create a cohort using the connection wrapper
+    db_connection.execute("INSERT INTO cohorts (name, start_date) VALUES (%s, %s)", 
+                         ["April 2024", "2024-04-01"])
     
     # Test creating student
     student = Student(None, "John Doe", "john@makers.tech", 1)
@@ -355,13 +445,11 @@ def test_create_and_find_student(db_connection):
 def test_delete_student(db_connection):
     repository = StudentRepository(db_connection)
     
-    # Setup: create a student
-    with db_connection.cursor() as cursor:
-        cursor.execute("INSERT INTO cohorts (name, start_date) VALUES (%s, %s)", 
-                      ["April 2024", "2024-04-01"])
-        cursor.execute("INSERT INTO students (name, email, cohort_id) VALUES (%s, %s, %s)",
-                      ["Jane Doe", "jane@makers.tech", 1])
-        db_connection.commit()
+    # Setup: create test data using the connection wrapper
+    db_connection.execute("INSERT INTO cohorts (name, start_date) VALUES (%s, %s)", 
+                         ["April 2024", "2024-04-01"])
+    db_connection.execute("INSERT INTO students (name, email, cohort_id) VALUES (%s, %s, %s)",
+                         ["Jane Doe", "jane@makers.tech", 1])
     
     # Test deletion
     repository.delete(1)
@@ -386,42 +474,49 @@ CREATE TABLE posts (
 );
 ```
 
-### Repository with Joins
+## Repository with Joins
 ```python
 # post_repository.py
+from lib.post import Post
+from lib.user import User
+
 class PostRepository:
+    
+    # Initialize with a database connection
     def __init__(self, connection):
         self._connection = connection
     
+    # Find post with user information using JOIN
     def find_with_user(self, post_id):
-        """Find post with user information"""
-        with self._connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT posts.id, posts.title, posts.content, 
-                       users.id, users.username, users.email
-                FROM posts
-                JOIN users ON users.id = posts.user_id
-                WHERE posts.id = %s
-            """, [post_id])
-            
-            row = cursor.fetchone()
-            if row:
-                user = User(row[3], row[4], row[5])
-                post = Post(row[0], row[1], row[2], user)
-                return post
+        rows = self._connection.execute("""
+            SELECT posts.id, posts.title, posts.content, 
+                   users.id, users.username, users.email
+            FROM posts
+            JOIN users ON users.id = posts.user_id
+            WHERE posts.id = %s
+        """, [post_id])
+        
+        if not rows:
             return None
-    
-    def find_by_user(self, user_id):
-        """Find all posts by a specific user"""
-        with self._connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT id, title, content FROM posts 
-                WHERE user_id = %s 
-                ORDER BY created_at DESC
-            """, [user_id])
             
-            rows = cursor.fetchall()
-            return [Post(row[0], row[1], row[2], user_id) for row in rows]
+        row = rows[0]
+        user = User(row["users.id"], row["users.username"], row["users.email"])
+        post = Post(row["posts.id"], row["posts.title"], row["posts.content"], user)
+        return post
+    
+    # Find all posts by a specific user
+    def find_by_user(self, user_id):
+        rows = self._connection.execute("""
+            SELECT id, title, content FROM posts 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC
+        """, [user_id])
+        
+        posts = []
+        for row in rows:
+            item = Post(row["id"], row["title"], row["content"], user_id)
+            posts.append(item)
+        return posts
 ```
 
 ### Understanding One-to-Many Relationships
