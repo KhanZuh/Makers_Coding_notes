@@ -17,6 +17,21 @@
 
 ## PostgreSQL Command Cheat Sheet
 
+
+```bash
+psql -d student_directory_2	
+```
+| Part                     | Meaning                                                              |
+| ------------------------ | -------------------------------------------------------------------- |
+| `psql`                   | Launches the PostgreSQL command-line tool (REPL / interactive shell) |
+| `-d student_directory_2` | Tells `psql` to connect to the database named `student_directory_2`  |
+
+
+Simplest way to open psql repl for a previously ctreated database (only if system username == database username e.g. zuhairkhan)
+
+
+
+
 ```bash
 -- Connect to PostgreSQL
 psql -U username -d database_name
