@@ -773,5 +773,262 @@ John Smith (member_id=201)
     └─ Loan 2: borrowed book_id=102 on 2024-02-20
 ```
 
+# Makers Workbook - Databses Module (Extension notes)
+# SQL Joins and Many-to-Many Relationships: Comprehensive Guide
+
+## Core Concept: What You're Learning
+
+You're learning how to **efficiently retrieve related data from multiple database tables** using JOINs, and how to handle **many-to-many relationships** - a fundamental skill for building real-world applications where data is interconnected.
+
+## The 80/20 Breakdown
+
+### The 20% That Gives You 80% of the Value
+
+1. **Basic JOIN syntax** - combining two tables
+2. **Many-to-many relationships** - using join tables
+3. **Repository pattern** - organizing database queries in classes
+
+---
+
+## 1. The N+1 Problem (Why JOINs Matter)
+
+### The Inefficient Way
+```sql
+-- First query: Get the album
+SELECT id, title, artist_id FROM albums WHERE title = 'Bossanova';
+
+-- Second query: Get the artist using the foreign key
+SELECT id, name, genre FROM artists WHERE id = 1;
+```
+
+Problem: If you need 10 albums + their artists = 20 separate queries! This is the N+1 problem.
+
+```sql
+-- One query gets both album AND artist data
+SELECT albums.id, albums.title, artists.name
+FROM albums
+JOIN artists ON artists.id = albums.artist_id;
+```
+
+## 2. Basic JOIN Syntax
+
+### Structure
+```sql
+SELECT [columns to select]
+FROM [table name]
+JOIN [other table name]
+ON [join condition]
+```
+### Real Example
+```sql
+SELECT albums.id,
+       albums.title,
+       artists.id AS artist_id,
+       artists.name
+FROM albums
+JOIN artists ON artists.id = albums.artist_id;
+```
+
+Key Points:
+- Prefix column names with table name: albums.id, artists.name
+- Use aliases to avoid duplicate column names: artists.id AS artist_id
+- ON clause defines the relationship: artists.id = albums.artist_id
+
+### Common JOIN Example with Filtering
+```sql
+-- Get only ABBA albums
+SELECT albums.id AS album_id,
+       albums.title,
+       artists.name
+FROM artists
+JOIN albums ON albums.artist_id = artists.id
+WHERE artists.name = 'ABBA';
+```
+
+## 3. Many-to-Many Relationships
+
+### When Do You Need This?
+Ask these questions:
+
+- Can one [TABLE A] have many [TABLE B]?
+- Can one [TABLE B] have many [TABLE A]?
+
+If both answers are YES → Many-to-Many relationship needed.
+
+Example: Posts and Tags
+- Can one post have many tags? ✅ Yes
+- Can one tag be on many posts? ✅ Yes
+
+### The Solution: Join Table
+```sql
+-- Main tables
+CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    title text
+);
+
+CREATE TABLE tags (
+    id SERIAL PRIMARY KEY,
+    name text 
+);
+
+-- Join table (links posts and tags)
+CREATE TABLE posts_tags (
+    post_id int,
+    tag_id int,
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+    FOREIGN KEY (tag_id) REFERENCES tags(id)
+);
+```
+### Querying Many-to-Many Data
+```sql
+-- Get all tags for post ID 2
+SELECT tags.id, tags.name
+FROM tags 
+JOIN posts_tags ON posts_tags.tag_id = tags.id
+JOIN posts ON posts_tags.post_id = posts.id
+WHERE posts.id = 2;
+```
+
+Reading the Query:
+1. Start with posts (filter by ID 2)
+2. Join to posts_tags (the bridge table)
+3. Join to tags (get the final data)
+
+## 4. Repository Pattern with JOINs
+
+### Model Classes
+```python
+# Artist model
+class Artist:
+    def __init__(self, id, name, genre, albums = []):
+        self.id = id
+        self.name = name
+        self.genre = genre
+        self.albums = albums  # Array of Album objects
+
+# Album model  
+class Album:
+    def __init__(self, id, title, release_year, artist_id):
+        self.id = id
+        self.title = title
+        self.release_year = release_year
+        self.artist_id = artist_id
+```
+
+### Repository with JOIN Method
+
+```python
+class ArtistRepository:
+    def find_with_albums(self, artist_id):
+        # JOIN query to get artist + all their albums
+        rows = self._connection.execute(
+            "SELECT artists.id as artist_id, artists.name, artists.genre, "
+            "albums.id AS album_id, albums.title, albums.release_year "
+            "FROM artists JOIN albums ON artists.id = albums.artist_id "
+            "WHERE artists.id = %s", [artist_id])
+        
+        # Build array of Album objects
+        albums = []
+        for row in rows:
+            album = Album(row["album_id"], row["title"], 
+                         row["release_year"], row["artist_id"])
+            albums.append(album)
+
+        # Return single Artist with albums array
+        return Artist(rows[0]["artist_id"], rows[0]["name"], 
+                     rows[0]["genre"], albums)
+```
+
+### Usage
+```python
+repository = ArtistRepository(connection)
+
+# One method call = one database query
+artist = repository.find_with_albums(1)
+
+print(f"Artist: {artist.name}")
+for album in artist.albums:
+    print(f"  - {album.title}")
+```
+
+## 5. Many-to-Many Repository Methods
+
+### Finding Posts by Tag
+```python
+class PostRepository:
+    def find_by_tag(self, tag_name):
+        rows = self._connection.execute(
+            "SELECT posts.id, posts.title "
+            "FROM posts "
+            "JOIN posts_tags ON posts.id = posts_tags.post_id "
+            "JOIN tags ON posts_tags.tag_id = tags.id "
+            "WHERE tags.name = %s", [tag_name])
+        
+        posts = []
+        for row in rows:
+            posts.append(Post(row["id"], row["title"]))
+        
+        return posts
+```
+
+### Usage
+
+```python
+post_repo = PostRepository()
+coding_posts = post_repo.find_by_tag('coding')
+# Returns all posts tagged with 'coding'
+```
+
+## 6. Test-Driven Development Pattern
+
+### Writing the Test First
+```python
+def test_find_with_albums(db_connection):
+    db_connection.seed("seeds/music_library.sql")
+    repository = ArtistRepository(db_connection)
+    
+    artist = repository.find_with_albums(1)
+    
+    # Expected: Artist with 3 albums
+    assert artist == Artist(1, "Pixies", "Rock", [
+        Album(1, "Doolittle", 1989, 1),
+        Album(2, "Surfer Rosa", 1988, 1),
+        Album(5, "Bossanova", 1990, 1),
+    ])
+```
+
+### Then Implement the Method
+```
+def find_with_albums(self, artist_id):
+    # Implementation goes here
+    pass
+```
+
+## Key Takeaways
+
+Essential Skills You've Learned:
+1. JOIN queries solve the N+1 problem by combining data from multiple tables in one query
+2. Many-to-many relationships require a join table with foreign keys to both main tables
+3. Repository pattern organizes complex queries into clean, testable methods
+4. Prefixing column names avoids ambiguity in multi-table queries
+
+When to Use Each Pattern:
+- Simple JOIN: When you need data from 2 related tables (one-to-many)
+- Many-to-many JOIN: When records can belong to multiple records in another table
+- Repository methods: When you want to encapsulate complex queries in reusable, testable code
+
+Common Real-World Examples:
+- Users & Orders: One user, many orders (simple JOIN)
+- Students & Courses: Many students per course, many courses per student (many-to-many)
+- Products & Categories: Many products per category, products can be in multiple categories (many-to-many)
+
+
+
+
+
+
+
+
 
 
