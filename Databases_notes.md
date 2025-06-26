@@ -665,7 +665,7 @@ The **StudentManagerApp** class demonstrates the Application Layer pattern, whic
 The beauty of this pattern is evident in the `main()` function - complex database operations involving multiple tables and business rules are reduced to simple, readable method calls. This makes the codebase more maintainable, as changes to database structure only affect repositories, while changes to business rules are contained within the application layer.
 
 
-# Makers Workbook - Databses Module (Extension notes)
+
 # SQL Joins and Many-to-Many Relationships: Comprehensive Guide
 
 ## Core Concept: What You're Learning
