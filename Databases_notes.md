@@ -541,7 +541,7 @@ This example demonstrates a classic one-to-many relationship where one user can 
 The repository pattern showcases two common query patterns for one-to-many relationships. The `find_with_user` method uses an INNER JOIN to fetch a post along with its associated user data in a single query, avoiding the N+1 query problem. This is particularly useful when you need both the post and user information together. The `find_by_user` method demonstrates the reverse lookup - finding all posts that belong to a specific user, ordered by creation date to show the most recent posts first.
 
 
-When working with one-to-many relationships, consider the query patterns your application needs most frequently. Sometimes you'll want to fetch the parent with all children (user with all posts), other times just the parent or just the children. The repository methods should be designed to efficiently support these common access patterns while maintaining clean separation between your domain logic and data access code.RetryClaude can make mistakes. Please double-check responses.
+When working with one-to-many relationships, consider the query patterns your application needs most frequently. Sometimes you'll want to fetch the parent with all children (user with all posts), other times just the parent or just the children. The repository methods should be designed to efficiently support these common access patterns while maintaining clean separation between your domain logic and data access code.
 
 
 # ⬇️⬆️➡️ Sequence Diagrams
