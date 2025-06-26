@@ -844,6 +844,36 @@ for album in artist.albums:
     print(f"  - {album.title}")
 ```
 
+This example teaches how to avoid the "N+1 query problem" by using JOINs in the Repository Pattern.
+The Problem (N+1 queries):
+
+Without JOINs, you'd need multiple database trips:
+
+Get the artist (1 query)
+Get each album separately (N more queries for N albums)
+
+
+If an artist has 10 albums, that's 11 total database calls!
+
+The Solution (JOIN query):
+
+Use one SQL JOIN to get everything at once
+The database does the heavy lifting of combining artist + album data
+You get all the data in a single round trip
+
+Key Teaching Points:
+
+1. Performance: One query is much faster than many separate queries
+2. Data Assembly: The code shows how to take "flat" JOIN results and rebuild them into nested objects (Artist containing an array of Albums)
+3. Repository Benefits: The complexity is hidden - callers just use find_with_albums() and don't know about the JOIN magic happening underneath
+
+Real-world analogy: Instead of making separate trips to get your friend and then each of their pets, you ask for "my friend AND all their pets" in one go. Much more efficient!
+This is a fundamental database optimization technique that every developer should know.
+
+
+
+
+
 ## 5. Many-to-Many Repository Methods
 
 ### Finding Posts by Tag
@@ -871,6 +901,36 @@ post_repo = PostRepository()
 coding_posts = post_repo.find_by_tag('coding')
 # Returns all posts tagged with 'coding'
 ```
+
+This is teaching you how to find posts that have a specific tag when posts and tags have a many-to-many relationship.
+The Big Picture:
+
+Posts can have multiple tags (like "coding", "python", "tutorial")
+Tags can be on multiple posts
+You need a "bridge table" (posts_tags) to connect them
+
+What the code does:
+
+Joins three tables together - like connecting puzzle pieces:
+
+posts table (has the actual posts)
+posts_tags table (the bridge that says "post #5 has tag #2")
+tags table (has tag names like "coding")
+
+
+Filters by tag name - only gets posts that have the specific tag you're looking for
+Returns a list of Post objects - gives you back actual Post objects, not just raw database data
+
+Real-world example:
+If you have a blog and want to show all posts tagged with "cooking", this method would:
+
+Look in the tags table for "cooking"
+Find which posts are connected to that tag
+Return all those posts as a nice list
+
+Key concept: When you have many-to-many relationships, you need to JOIN multiple tables to get the data you want. The bridge table is what makes it possible to connect posts to their tags.
+
+
 
 ## 6. Test-Driven Development Pattern
 
