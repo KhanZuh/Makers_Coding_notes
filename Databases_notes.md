@@ -261,6 +261,36 @@ class DatabaseConnection:
         if self.connection is None:
             raise Exception(self.CONNECTION_MESSAGE)
 ```
+### What This Code Does
+This is a helper class that makes it easier to talk to a PostgreSQL database from Python. Think of it like a translator that helps your Python program communicate with a database.
+The Main Parts
+
+### Setting Up the Connection
+The class stores the database name ("student_database")
+It uses a library called psycopg to connect to PostgreSQL
+It sets up results to come back as dictionaries (like {"name": "John", "age": 20}) instead of just lists
+
+### Key Methods
+`connect()` - Opens the door to the database
+Tries to connect to the database on your computer
+If it can't connect, it gives you a helpful error message telling you to create the database first
+
+`seed()` - Fills the database with starter data
+Takes a SQL file and runs all the commands in it
+Useful for setting up tables and adding initial data
+
+`execute()` - Runs any SQL command you want
+Can run queries (SELECT) or commands (INSERT, UPDATE, DELETE)
+Automatically handles the cursor (think of it as a pointer that moves through results)
+Returns results if it's a query, or None if it's just a command
+
+### Safety Features
+Always checks if you're connected before trying to run commands
+Automatically commits changes so they're saved
+Manages cursors properly so you don't have memory leaks
+
+***In Simple Terms: This class is like having a smart assistant that handles all the boring database connection stuff, so you can just focus on writing your SQL queries!***
+
 
 ## Repository Pattern Implementation
 ```python
@@ -319,15 +349,6 @@ class Student:
     def __repr__(self):
         return f"Student({self.id}, {self.name}, {self.email}, {self.cohort_id})"
 ```
-The DatabaseConnection class is designed as a wrapper around the psycopg library to provide a simplified, consistent interface for database operations. 
-
-It uses psycopg3 with `dict_row` factory so that query results are returned as dictionaries rather than tuples, making data access more intuitive and maintainable through column names like `row["name"]` instead of positional indexing. 
-
-The central `execute()` method handles all cursor management automatically, ensuring proper resource cleanup and connection management while abstracting away the complexity of manual cursor creation and cleanup. 
-
-This design provides built-in error handling with meaningful messages, automatic transaction management through commits, and connection validation to prevent runtime errors. The repository classes leverage this abstraction by simply calling `execute()` with SQL queries and parameters, allowing them to focus on business logic rather than database plumbing. 
-
-This pattern promotes code reusability, reduces boilerplate, and minimizes the risk of resource leaks or connection issues that can occur with manual cursor management, while maintaining clean separation between data access logic and database connection concerns.
 
 
 # 📡 TDD for databases 
