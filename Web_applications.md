@@ -75,11 +75,260 @@ Common Status Codes:
 - 500 Internal Server Error - Something broke on our end 💥
 - 201 Created - Successfully created something new ✨
 
+## Section 1.5: Using Postman
+Basic Interface
+- Request tabs: Create multiple requests
+- Method dropdown: GET, POST, PUT, DELETE
+- URL bar: Enter your Flask app URL
+- Headers tab: Set request headers
+- Body tab: Send data with POST/PUT requests
+- Tests tab: Write automated tests (advanced)
+
+### 📝 Making Requests
+
+**GET Requests (Reading Data)**
+Simple GET:
+```
+Method: GET
+URL: http://localhost:5000/
+```
+
+GET with Path Parameters:
+```
+Method: GET
+URL: http://localhost:5000/users/1
+```
+
+GET with Query Parameters:
+```
+Method: GET
+URL: http://localhost:5000/search
+
+Params tab:
+Key: q          Value: python
+Key: limit      Value: 10
+```
+This creates: `http://localhost:5000/search?q=python&limit=10`
+
+**POST Requests (Creating Data)**
+Sending JSON Data:
+```
+Method: POST
+URL: http://localhost:5000/users
+
+Headers tab:
+Key: Content-Type    Value: application/json
+
+Body tab → raw → JSON:
+{
+    "name": "Alice Smith",
+    "email": "alice@example.com",
+    "age": 25
+}
+```
+
+Sending Form Data:
+```
+Method: POST
+URL: http://localhost:5000/users
+
+Body tab → x-www-form-urlencoded:
+Key: name     Value: Alice Smith
+Key: email    Value: alice@example.com
+Key: age      Value: 25
+```
+
+**PUT Requests (Updating Data)**
+```
+Method: PUT
+URL: http://localhost:5000/users/1
+
+Headers tab:
+Key: Content-Type    Value: application/json
+
+Body tab → raw → JSON:
+{
+    "name": "Alice Johnson",
+    "email": "alice.johnson@example.com"
+}
+```
+
+**DELETE Requests**
+```
+Method: DELETE
+URL: http://localhost:5000/users/1
+```
+
+### 🔧 Common Headers
+
+| Header        | Purpose       | Example       | 
+| ------------- | ------------- | ------------- | 
+| `Content-Type` | What type of data you're sending  | `application/json`  | 
+| `Accept`  | What type of response you want | `application/json`
+| Authorization | Authentication token | `Bearer abc123`
+
+**How to add headers:**
+- Click "Headers" tab
+- Enter Key and Value
+- Make sure it's checked ✅
+
+### 🧪 Testing Your Flask Routes
+
+```
+python app.py
+# Server runs on http://localhost:5000
+```
+
+Test each route systematically:
+```
+✅ Test GET /
+Method: GET
+URL: http://localhost:5000/
+Expected: 200 OK, homepage content
+
+✅ Test GET /users
+Method: GET  
+URL: http://localhost:5000/users
+Expected: 200 OK, list of users
+
+✅ Test POST /users (create)
+Method: POST
+URL: http://localhost:5000/users
+Body: {"name": "Test User", "email": "test@example.com"}
+Expected: 201 Created
+
+✅ Test GET /users/1 (view specific)
+Method: GET
+URL: http://localhost:5000/users/1  
+Expected: 200 OK, user details
+
+✅ Test invalid route
+Method: GET
+URL: http://localhost:5000/nonexistent
+Expected: 404 Not Found
+```
+
+### 🎯 Quick Recipes for Common Scenarios
+Recipe 1: Test a Simple Route
+```
+1. Set method to GET
+2. Enter your Flask URL (http://localhost:5000/route)
+3. Click Send
+4. Check status is 200
+5. Verify response content looks right
+```
+
+Recipe 2: Test Form Submission
+```
+1. Set method to POST
+2. Enter form action URL
+3. Go to Body tab → x-www-form-urlencoded
+4. Add form fields as key-value pairs
+5. Click Send
+6. Check status (usually 200 or 302 redirect)
+```
+
+Recipe 3: Test JSON API
+```
+1. Set method to POST/PUT
+2. Enter API endpoint URL
+3. Headers tab: Content-Type = application/json
+4. Body tab → raw → JSON
+5. Enter JSON data
+6. Click Send
+7. Check response JSON
+```
+
+Recipe 4: Test with Parameters
+```
+1. Set method to GET
+2. Enter base URL (without query string)
+3. Params tab: Add key-value pairs
+4. Postman builds URL automatically
+5. Click Send
+```
+
+### 🛠️ Troubleshooting
+
+Common Issues & Solutions
+```
+❌ "Could not get response"
+
+✅ Check Flask server is running (python app.py)
+✅ Verify URL is correct (usually localhost:5000)
+✅ Check for typos in the URL
+```
+```
+❌ 404 Not Found
+
+✅ Check route exists in your Flask app
+✅ Verify HTTP method matches (GET vs POST)
+✅ Check URL path is exactly right (case sensitive)
+```
+
+```
+❌ 500 Internal Server Error
+
+✅ Check Flask terminal for error messages
+✅ Look for Python exceptions in your code
+✅ Add app.run(debug=True) for detailed errors
+```
+```
+❌ 400 Bad Request
+
+✅ Check request body format (JSON vs form data)
+✅ Verify required fields are included
+✅ Check Content-Type header is correct
+```
+```
+❌ JSON Parsing Errors
+
+✅ Validate JSON syntax (use JSON validator)
+✅ Ensure proper quotes (double quotes for JSON)
+✅ Check for trailing commas
+```
+### 💡 Pro Tips
+Organize Your Work
+```
+📁 Create a Collection for your project
+   📄 Request: Get All Users
+   📄 Request: Create User  
+   📄 Request: Get User by ID
+   📄 Request: Update User
+   📄 Request: Delete User
+```
+
+Save Useful Requests
+- Click "Save" after creating a request
+- Name it clearly: "Get All Posts" not "Request"
+- Add descriptions for complex requests
+
+Use Variables
+```
+Set up environment variables:
+{{base_url}} = http://localhost:5000
+{{user_id}} = 1
+
+Then use in requests:
+{{base_url}}/users/{{user_id}}
+```
+
+
+
+
+
+
+
+
+
+
+
 ## Section 2: Flask Framework
 ### What is Flask?
 Flask is a Python library that makes it easy to create web servers. It handles all the complicated HTTP stuff so you can focus on your application logic.
 
 ELI5: Flask is like having a really smart assistant who speaks "HTTP fluent" and translates between your Python code and web browsers.
+
 
 ### Setting Up a Flask Project
 ```python
